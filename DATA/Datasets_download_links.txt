@@ -1,0 +1,11 @@
+Patch-seq dataset:
+	https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE70844
+Direct download:
+	https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE70844&format=file&file=GSE70844%5FFuzik%5Fet%5Fal%5Fmolcounts%2Exls%2Egz
+
+
+
+Allen dataset:
+	https://portal.brain-map.org/atlases-and-data/rnaseq/mouse-v1-and-alm-smart-seq
+Alredy processed SeuratObject:
+	https://signac-objects.s3.amazonaws.com/allen_brain.rds
