@@ -1,3 +1,103 @@
+# <patch-seq-sample-enrichment>
+#
+# Copyright © 2022 Politecnico di Torino, Control and Computer Engineering Department, SMILIES group
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy of this software and 
+# associated documentation files (the "Software"), to deal in the Software without restriction, 
+# including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, 
+# and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
+# subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all copies or substantial 
+# portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT 
+# LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, 
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+
+
+########################################################################################
+#
+# INSTALL REQUIRED PACKAGES IF NEEDED
+# 
+# N.B. This may require the installation of local libraries. Please check the README
+# file of the project for a list of required packages
+#
+# ######################################################################################
+if (!requireNamespace("httr", quietly = TRUE)) 
+  install.packages("httr", dependencies = c("Depends"))
+
+if (!requireNamespace("igraph", quietly = TRUE)) 
+  install.packages("igraph", dependencies = c("Depends"))
+
+if (!requireNamespace("systemfonts", quietly = TRUE)) 
+  install.packages("systemfonts", dependencies = c("Depends"))
+
+if (!requireNamespace("qpdf", quietly = TRUE)) 
+  install.packages("qpdf", dependencies = c("Depends"))
+
+if (!requireNamespace("textshaping", quietly = TRUE)) 
+  install.packages("textshaping", dependencies = c("Depends"))
+
+if (!requireNamespace("ragg", quietly = TRUE)) 
+  install.packages("ragg", dependencies = c("Depends"))
+
+if (!requireNamespace("pkgdown", quietly = TRUE)) 
+  install.packages("pkgdown", dependencies = c("Depends"))
+
+if (!requireNamespace("devtools", quietly = TRUE)) 
+  install.packages("devtools", dependencies = c("Depends"))
+
+if (!requireNamespace("leiden", quietly = TRUE)) 
+  install.packages("leiden", dependencies = c("Depends"))
+
+if (!requireNamespace("plotly", quietly = TRUE)) 
+  install.packages("plotly", dependencies = c("Depends"))
+
+install.packages('BiocManager', dependencies = c("Depends"))
+BiocManager::install()
+BiocManager::install('multtest')
+install.packages('Seurat')
+
+if (!requireNamespace("Seurat", quietly = TRUE)) 
+  install.packages("Seurat", dependencies = TRUE)
+
+if (!requireNamespace("Seurat", quietly = TRUE)) 
+  install.packages("R.utils", dependencies = c("Depends"))
+
+if (!requireNamespace("SeuratWrappers", quietly = TRUE)) 
+  remotes::install_github('satijalab/seurat-wrappers')
+
+if (!requireNamespace("dplyr", quietly = TRUE)) 
+  install.packages("dplyr", dependencies = c("Depends"))
+
+if (!requireNamespace("aricode", quietly = TRUE)) 
+  install.packages("aricode", dependencies = c("Depends"))
+
+if (!requireNamespace("data.table", quietly = TRUE)) 
+  install.packages("data.table", dependencies = c("Depends"))
+
+if (!requireNamespace("cellranger", quietly = TRUE)) 
+  install.packages("cellranger", dependencies = c("Depends"))
+
+if (!requireNamespace("readxl", quietly = TRUE)) 
+  install.packages("readxl", dependencies = c("Depends"))
+
+if (!requireNamespace("sctransform", quietly = TRUE)) 
+  install.packages("sctransform", dependencies = c("Depends"))
+
+if (!requireNamespace("class", quietly = TRUE)) 
+  install.packages("class", dependencies = c("Depends"))
+
+########################################################################################
+#
+# LOAD REQUIRED PACKAGES
+# 
+#######################################################################################
+
 library(Seurat)
 library(SeuratWrappers)
 library(dplyr)
@@ -8,7 +108,13 @@ library(sctransform)
 library(class)
 library(ggplot2)
 
-########### RI functions definition##########
+
+########################################################################################
+#
+# RI functions definition
+# 
+#######################################################################################
+
 cell_similarity <- function (cell1, cell2)
 {
   cell1 <- as.numeric(cell1)
@@ -106,18 +212,18 @@ cell_similarity_variable_hard <- function (cell2, cell1, features)
 
 ############ loading processing of Allen #############
 
-allen_reference <- readRDS("C:/.../allen_brain.rds")
-allen_reference <- as.Seurat(allen_reference)
+allen_reference <- readRDS("DATA/allen_brain.rds")
 Idents(allen_reference) <- "class"
 
-#choosing onlyneurons cell types#
+#choosing only neurons cell types#
 allen_reference <- subset(allen_reference, idents = c("GABAergic", "Glutamatergic"))
 sub_ref <- allen_reference
 rm(allen_reference)
 
-DimPlot(sub_ref, pt.size = 1, group.by = "subclass") +labs(title = "Allen cells") +theme(plot.title = element_text(size = 20, face = "bold", hjust = 0.5)) 
+#DimPlot(sub_ref, pt.size = 1, group.by = "subclass") +labs(title = "Allen cells") +theme(plot.title = element_text(size = 20, face = "bold", hjust = 0.5)) 
 
 ########### creation of the subset of Allen as query and its processing ########
+
 memory.size(30000)
 reference_cells <- Cells(sub_ref)
 subref_cells <- sample(reference_cells, 80)
@@ -136,13 +242,16 @@ sub_ref_query <- RunUMAP(sub_ref_query, dims = 1:30, reduction.name = "umap")
 sub_ref_query <- FindNeighbors(sub_ref_query, dims = 1:30)
 sub_ref_query <- FindClusters(sub_ref_query, resolution = 0.01, algorithm = 3)
 
+pdf("TMP/AA_sub_allen_cells.pdf")
 DimPlot(sub_ref_query)
+dev.off()
 
-saveRDS(sub_ref,"C:/.../Results_obj/AR_SR_REF_obj")
-saveRDS(sub_ref_query,"C:/.../Results_obj/AR_SR_query_obj")
+saveRDS(sub_ref,"TMP/AR_SR_REF_obj")
+saveRDS(sub_ref_query,"TMP/AR_SR_query_obj")
 
 
 ####### Finding Anchors ########
+
 DefaultAssay(sub_ref_query) <- "SCT"
 DefaultAssay(sub_ref) <- "SCT"
 features_SCT <- SelectIntegrationFeatures(object.list = c(sub_ref, sub_ref_query))
@@ -162,10 +271,11 @@ integrated <- RunPCA(integrated)
 integrated <- RunUMAP(integrated, dims = 1:30, reduction.name = "umap")
 integrated <- FindNeighbors(integrated, dims = 1:30,return.neighbor = TRUE)
 
+pdf("TMP/AA_integrated.pdf")
 DimPlot(integrated, pt.size = 2, group.by = "subclass") +labs(title = "Integrated visualization") +theme(plot.title = element_text(size = 20, face = "bold", hjust = 0.5)) + scale_shape_manual(values = c(1, 4))
+dev.off()
 
-DimPlot(integrated, cells = c(anchors_couples_SCT$cell1_name, anchors_couples_SCT$cell2_name), group.by = "subclass", label = TRUE)
-saveRDS(integrated,"C:/.../Results_obj/AR_SR_INT_obj")
+saveRDS(integrated,"TMP/AR_SR_INT_obj")
 
 
 ######### anchors metrics computation #######
@@ -186,20 +296,8 @@ ref_mat <- ref_mat[features,]
 query_mat <- sub_ref_query@assays[["SCT"]]@counts
 query_mat <- query_mat[features,] 
 
-#genes_mean <- as.data.frame(rownames(ref_mat))
-#colnames(genes_mean) <- "gene_name"
-#genes_mean <- genes_mean %>% rowwise() %>% mutate(mean = sum(ref_mat[gene_name,])/sum(ref_mat[gene_name,]>0))
-#saveRDS(genes_mean,"C:/Users/loren/BIBM/2022/gene_mean")
-#genes_mean <- readRDS("C:/Users/loren/BIBM/2022/gene_mean")
-#genes_mean_query <- as.data.frame(rownames(query_mat))
-#colnames(genes_mean_query) <- "gene_name"
-#genes_mean_query <- genes_mean_query %>% rowwise() %>% mutate(mean = sum(query_mat[gene_name,])/sum(query_mat[gene_name,]>0))
-#genes_mean <- genes_mean[genes_mean$gene_name %in% genes_mean_query$gene_name, ]
-#genes_mean_query <- genes_mean_query[genes_mean_query$gene_name %in% genes_mean$gene_name, ]
-
-
 #loading list of electrophysiology genes #
-elettrophys.genes <- read.table("C:/.../elettrophys genes.txt", quote="\"", comment.char="")
+elettrophys.genes <- read.table("DATA/elettrophys_genes.txt", quote="\"", comment.char="")
 
 
 #creation of table with all the anchors, and  computation #
@@ -207,23 +305,18 @@ anchors_couples_SCT$label <- sub_ref@meta.data[Cells(sub_ref)[anchors_couples_SC
 anchors_couples_SCT$label_query <- sub_ref@meta.data[anchors_couples_SCT$cell2_name,][["subclass"]]
 
 anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI = cell_similarity(as.character(ref_mat[,cell1]),as.character(query_mat[,cell2])))
-anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_var = cell_similarity_variable(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2]), features = var_features))
+anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_var = cell_similarity_variable(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2]), features = features_SCT))
 anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_eletp = cell_similarity_variable(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2]), features = elettrophys.genes$V1))
-#anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_level_4 = cell_similarity_level(as.character(ref_mat[,cell1]),as.character(query_mat[,cell2]),genes_mean, genes_mean_query))
 
 anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_strict = cell_similarity_hard(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2])))
-anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_var_strict = cell_similarity_variable_hard(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2]), features = var_features))
+anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_var_strict = cell_similarity_variable_hard(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2]), features = features_SCT))
 anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_eletp_strict = cell_similarity_variable_hard(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2]), features = elettrophys.genes$V1))
-#anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_strict_level_4 = cell_similarity_level_hard(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2]),genes_mean, genes_mean_query))
-
-#anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_var_i = cell_similarity_variable(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2]), features = var_features))
-#anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_var_i_strict = cell_similarity_variable_hard(as.data.frame(ref_mat[,cell1]),as.data.frame(query_mat[,cell2]), features = var_features))
 
 int_mat <- integrated@assays[["integrated"]]@data
 
 anchors_couples_SCT <- anchors_couples_SCT %>% rowwise()%>% mutate(RI_int = cell_similarity(as.character(int_mat[,cell1_name]),as.character(int_mat[,cell2_name])))
 anchors_couples_SCT <- anchors_couples_SCT %>% rowwise() %>% mutate(RI_eletp_int = cell_similarity_variable(as.data.frame(int_mat[,cell1_name]),as.data.frame(int_mat[,cell2_name]), features = elettrophys.genes$V1))
-anchors_couples_SCT <- anchors_couples_SCT %>% rowwise() %>% mutate(RI_var_int = cell_similarity_variable(as.data.frame(int_mat[,cell1_name]),as.data.frame(int_mat[,cell2_name]), features = var_features))
+anchors_couples_SCT <- anchors_couples_SCT %>% rowwise() %>% mutate(RI_var_int = cell_similarity_variable(as.data.frame(int_mat[,cell1_name]),as.data.frame(int_mat[,cell2_name]), features = features_SCT))
 
 anchors_couples_SCT$RI_mean <- rowMeans(anchors_couples_SCT[,c("RI", "RI_var", "RI_eletp","RI_strict", "RI_var_strict", "RI_eletp_strict","RI_int", "RI_var_int", "RI_eletp_int")])
 anchors_couples_SCT$RI_mean_loose <- rowMeans(anchors_couples_SCT[,c("RI", "RI_var", "RI_eletp")])
@@ -232,14 +325,14 @@ anchors_couples_SCT$RI_mean_int <- rowMeans(anchors_couples_SCT[,c("RI_int", "RI
 anchors_couples_SCT$RI_mean_var <- rowMeans(anchors_couples_SCT[,c("RI_var_strict", "RI_var_int")])
 anchors_couples_SCT$RI_mean_eletp <- rowMeans(anchors_couples_SCT[,c("RI_eletp_strict", "RI_eletp_int")])
 
-#ggplot(anchors_couples_SCT, aes (RI_mean_strict, RI_mean)) + geom_jitter()
 
-saveRDS(anchors_couples_SCT,"C:/.../Results_obj/AR_SR_anchors_couples_SCT")
-anchors_couples_SCT <- readRDS("C:/.../Results_obj/AR_SR_anchors_couples_SCT")
+saveRDS(anchors_couples_SCT,"TMP/AR_SR_anchors_couples_SCT")
 
 anchors_couples_top <- anchors_couples_SCT %>% group_by(cell2) %>% top_n(1, RI_mean_strict)
 
+pdf("TMP/anchors_refrence_cells.pdf")
 DimPlot(integrated,group.by = "subclass", cells = c(anchors_couples_top$cell1_name, anchors_couples_top$cell2_name) )
+dev.off()
 
 ######### Nearest neighbor ########
 
@@ -256,22 +349,22 @@ NN_couples$ref_cells <- as.character(knn(train, test_data, train_label, k=1))
 NN_couples$UMAP_1 <- NULL
 NN_couples$UMAP_2 <- NULL
 
+pdf("TMP/NN_refrence_cells.pdf")
 DimPlot(integrated,group.by = "subclass", cells = c(NN_couples$query_cells, NN_couples$ref_cells))
+dev.off()
 
-NN_couples$label <- integrated@meta.data[NN_couples$ref_cells,][["subclass"]]
+ìNN_couples$label <- integrated@meta.data[NN_couples$ref_cells,][["subclass"]]
 
 NN_couples <- NN_couples %>% rowwise()%>% mutate(RI = cell_similarity(as.character(ref_mat[,ref_cells]),as.character(query_mat[,query_cells])))
-NN_couples <- NN_couples %>% rowwise() %>% mutate(RI_var = cell_similarity_variable(as.data.frame(ref_mat[,ref_cells]),as.data.frame(query_mat[,query_cells]), features = var_features))
+NN_couples <- NN_couples %>% rowwise() %>% mutate(RI_var = cell_similarity_variable(as.data.frame(ref_mat[,ref_cells]),as.data.frame(query_mat[,query_cells]), features = features_SCT))
 NN_couples <- NN_couples %>% rowwise() %>% mutate(RI_eletp = cell_similarity_variable(as.data.frame(ref_mat[,ref_cells]),as.data.frame(query_mat[,query_cells]), features = elettrophys.genes$V1))
-#NN_couples <- NN_couples %>% rowwise()%>% mutate(RI_rf = cell_similarity_level(as.character(ref_mat[,ref_cells]),as.character(query_mat[,query_cells]),genes_mean, genes_mean_query))
 
 NN_couples <- NN_couples %>% rowwise()%>% mutate(RI_strict = cell_similarity_hard(as.data.frame(ref_mat[,ref_cells]),as.data.frame(query_mat[,query_cells])))
-NN_couples <- NN_couples %>% rowwise() %>% mutate(RI_var_strict = cell_similarity_variable_hard(as.data.frame(ref_mat[,ref_cells]),as.data.frame(query_mat[,query_cells]), features = var_features))
+NN_couples <- NN_couples %>% rowwise() %>% mutate(RI_var_strict = cell_similarity_variable_hard(as.data.frame(ref_mat[,ref_cells]),as.data.frame(query_mat[,query_cells]), features = features_SCT))
 NN_couples <- NN_couples %>% rowwise() %>% mutate(RI_eletp_strict = cell_similarity_variable_hard(as.data.frame(ref_mat[,ref_cells]),as.data.frame(query_mat[,query_cells]), features = elettrophys.genes$V1))
-#NN_couples <- NN_couples %>% rowwise()%>% mutate(RI_strict_rf = cell_similarity_level_hard(as.data.frame(ref_mat[,ref_cells]),as.data.frame(query_mat[,query_cells]),genes_mean, genes_mean_query))
 
 NN_couples <- NN_couples %>% rowwise()%>% mutate(RI_int = cell_similarity(as.character(int_mat[,ref_cells]),as.character(int_mat[,query_cells])))
-NN_couples <- NN_couples %>% rowwise() %>% mutate(RI_var_int = cell_similarity_variable(as.data.frame(int_mat[,ref_cells]),as.data.frame(int_mat[,query_cells]), features = var_features))
+NN_couples <- NN_couples %>% rowwise() %>% mutate(RI_var_int = cell_similarity_variable(as.data.frame(int_mat[,ref_cells]),as.data.frame(int_mat[,query_cells]), features = features_SCT))
 NN_couples <- NN_couples %>% rowwise() %>% mutate(RI_eletp_int = cell_similarity_variable(as.data.frame(int_mat[,ref_cells]),as.data.frame(int_mat[,query_cells]), features = elettrophys.genes$V1))
 
 
@@ -282,7 +375,7 @@ NN_couples$RI_mean_int <- rowMeans(NN_couples[,c("RI_int", "RI_var_int", "RI_ele
 NN_couples$RI_mean_var <- rowMeans(NN_couples[,c("RI_var_strict", "RI_var_int")])
 NN_couples$RI_mean_eletp <- rowMeans(NN_couples[,c("RI_eletp_strict", "RI_eletp_int")])
 
-saveRDS(NN_couples,"C:/.../Results_obj/AR_SR_NN_couples")
+
 
 ####### plotting of anchors and NN #######
 
@@ -291,30 +384,28 @@ ac$type <- "Anchors"
 nc <- NN_couples[,c("RI_mean","RI_mean_loose","RI_mean_strict","RI_mean_int","RI_var_strict","RI_var_int","RI_mean_var","RI_eletp_strict","RI_eletp_int","RI_mean_eletp" )]
 nc$type <- "NN couples"
 
-saveRDS(NN_couples,"C:/.../Results_obj/SR_SR_NN_couples")
-saveRDS(anchors_couples_SCT,"C:/.../Results_obj/SR_SR_anchors_couples_SCT")
+saveRDS(NN_couples,"TMP/AR_SR_NN_couples")
+saveRDS(anchors_couples_SCT,"TMP/AR_SR_anchors_couples_SCT")
 
 results <- rbind(ac , nc)
+
+pdf("TMP/AA_RI_mean_RI_mean_s.pdf")
 ggplot(results, aes (RI_mean_strict, RI_mean, color = type)) + geom_point(size = 4) + labs(x = expression("RI"[mean]^s), y = expression("RI"[mean]), color = "Couples", title = "SubAllen vs Allen")+
   theme(plot.title = element_text(size = 20, face = "bold", hjust = 0.5), legend.title=element_text(size=20), legend.text=element_text(size=18), axis.title = element_text(size=20), axis.text = element_text(size=15))
+dev.off()
 
+pdf("TMP/AA_RI_mean_RI_mean_int.pdf")
 ggplot(results, aes (RI_mean_int, RI_mean, color = type)) + geom_point(size = 4) + labs(x = expression("RI"[mean]^int), y = expression("RI"[mean]), color = "Couples", title = "SubAllen vs Allen")+
   theme(plot.title = element_text(size = 20, face = "bold", hjust = 0.5), legend.title=element_text(size=20), legend.text=element_text(size=18), axis.title = element_text(size=20), axis.text = element_text(size=15))
+dev.off()
 
+pdf("TMP/AA_RI_var_RI_eph.pdf")
 ggplot(results, aes (RI_mean_var, RI_mean_eletp, color = type)) + geom_point(size = 4) + labs(x = expression("RI"[var_mean]), y = expression("RI"[eph_mean]), color = "Couples", title = "SubAllen vs Allen")+
   theme(plot.title = element_text(size = 20, face = "bold", hjust = 0.5), legend.title=element_text(size=20), legend.text=element_text(size=18), axis.title = element_text(size=20), axis.text = element_text(size=15))
+dev.off()
 
 mean(ac$RI_mean)
 mean(nc$RI_mean)
 
 mean(ac$RI_mean_strict)
 mean(nc$RI_mean_strict)
-
-
-ggplot(results, aes (RI_mean_int, RI_mean, color = type)) + geom_jitter()
-ggplot(results, aes (RI_mean_strict, RI_mean_int, color = type)) + geom_jitter()
-
-ggplot(results, aes (RI_mean_var, RI_mean_eletp, color = type)) + geom_jitter()
-
-ggplot(results, aes (RI_var_strict, RI_eletp_strict, color = type)) + geom_jitter()
-ggplot(results, aes (RI_var_int, RI_eletp_int, color = type)) + geom_jitter()
